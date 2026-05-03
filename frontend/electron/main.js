@@ -84,7 +84,7 @@ ipcMain.on('desktop-widget:drag-start', (_e, screenX, screenY) => {
 })
 
 ipcMain.on('desktop-widget:drag-move', (_e, screenX, screenY) => {
-  if (!widgetWindow || !dragState) return
+  if (!widgetWindow || !dragState || resizeState) return
   if (!Number.isFinite(screenX) || !Number.isFinite(screenY)) return
   const dx = Math.round(screenX) - dragState.startScreenX
   const dy = Math.round(screenY) - dragState.startScreenY
@@ -109,7 +109,7 @@ ipcMain.on('desktop-widget:resize-start', (_e, screenX, screenY) => {
 })
 
 ipcMain.on('desktop-widget:resize-move', (_e, screenX, screenY) => {
-  if (!widgetWindow || !resizeState) return
+  if (!widgetWindow || !resizeState || dragState) return
   if (!Number.isFinite(screenX) || !Number.isFinite(screenY)) return
   const dx = Math.round(screenX) - resizeState.startScreenX
   const dy = Math.round(screenY) - resizeState.startScreenY

@@ -51,10 +51,10 @@
       <div
         class="resize-handle no-drag"
         aria-hidden="true"
-        @pointerdown="onResizeDown"
-        @pointermove="onResizeMove"
-        @pointerup="onResizeUp"
-        @pointercancel="onResizeCancel"
+        @pointerdown.stop.prevent="onResizeDown"
+        @pointermove.stop.prevent="onResizeMove"
+        @pointerup.stop.prevent="onResizeUp"
+        @pointercancel.stop.prevent="onResizeCancel"
       ></div>
       <select v-model="selectedModelKey" class="desktop-widget-model-picker no-drag" aria-label="Live2D character">
         <option v-for="item in EMILIA_MODELS" :key="item.key" :value="item.key">
@@ -635,7 +635,7 @@ function onResizeCancel(e: PointerEvent): void {
   left: 14px;
   display: grid;
   gap: 4px;
-  max-width: 42%;
+  max-width: min(36%, 160px);
   padding: 8px 12px;
   border: 1px solid rgb(255 255 255 / 18%);
   border-radius: 12px;
