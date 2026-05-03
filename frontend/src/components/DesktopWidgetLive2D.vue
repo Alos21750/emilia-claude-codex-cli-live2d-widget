@@ -139,7 +139,11 @@ function normalizedCharacterScale(): number {
 }
 
 function normalizedResolution(): number {
-  return clampNumber(props.resolutionMultiplier, 1.0, 1.0, 4.0)
+  const value = clampNumber(props.resolutionMultiplier, 1.0, 1.0, 4.0)
+  if (value < 1.5) return 1
+  if (value <= 2.5) return 2
+  if (value < 3.5) return 3
+  return 4
 }
 
 function normalizedMaxFps(): number {
@@ -149,6 +153,11 @@ function normalizedMaxFps(): number {
 
 function normalizedVoiceVolume(): number {
   return clampNumber(props.voiceVolume, 0.8, 0, 1)
+}
+
+function snapToRenderPixel(value: number): number {
+  const resolution = normalizedResolution()
+  return Math.round(value * resolution) / resolution
 }
 
 function layoutModel(): void {
@@ -173,8 +182,8 @@ function layoutModel(): void {
   const targetTop = topPadding + Math.max(0, availableHeight - scaledHeight) * 0.42
 
   model.scale.set(scale)
-  model.x = targetLeft - bounds.x * scale
-  model.y = targetTop - bounds.y * scale
+  model.x = snapToRenderPixel(targetLeft - bounds.x * scale)
+  model.y = snapToRenderPixel(targetTop - bounds.y * scale)
 }
 
 function resizeRenderer(): void {
@@ -438,6 +447,7 @@ async function loadModel(path: string): Promise<void> {
 onMounted(() => {
   if (!canvasRef.value) return
   PIXI.settings.ROUND_PIXELS = true
+  PIXI.settings.RESOLUTION = normalizedResolution()
   app = new PIXI.Application({
     view: canvasRef.value,
     transparent: true,
@@ -448,7 +458,7 @@ onMounted(() => {
     backgroundAlpha: 0,
     resolution: normalizedResolution(),
     autoDensity: true,
-    antialias: true,
+    antialias: false,
   })
   app.stage.sortableChildren = true
   app.ticker.maxFPS = normalizedMaxFps()
@@ -513,7 +523,9 @@ watch(
   () => props.resolutionMultiplier,
   () => {
     if (!app) return
-    app.renderer.resolution = normalizedResolution()
+    const resolution = normalizedResolution()
+    PIXI.settings.RESOLUTION = resolution
+    app.renderer.resolution = resolution
     resizeRenderer()
   },
 )
