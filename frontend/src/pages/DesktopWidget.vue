@@ -7,6 +7,14 @@
 
     <section class="desktop-widget-stage" :class="statusClass">
       <div class="drag-handle" aria-hidden="true"></div>
+      <div
+        class="resize-handle no-drag"
+        aria-hidden="true"
+        @pointerdown="onResizeDown"
+        @pointermove="onResizeMove"
+        @pointerup="onResizeUp"
+        @pointercancel="onResizeCancel"
+      ></div>
       <select v-model="selectedModelKey" class="desktop-widget-model-picker no-drag" aria-label="Live2D character">
         <option v-for="item in EMILIA_MODELS" :key="item.key" :value="item.key">
           {{ item.displayName }}
@@ -39,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import DesktopWidgetLive2D from '../components/DesktopWidgetLive2D.vue'
 import { getSessionActivityEpoch } from '../utils/sessionStageState'
 import { isDesktopWidgetWarmupSession, useDesktopWidgetMonitor } from '../composables/desktopWidgetMonitor'
@@ -48,6 +56,8 @@ import { DEFAULT_EMILIA_KEY, EMILIA_MODELS, isValidEmiliaKey } from '../composab
 
 const monitor = useDesktopWidgetMonitor()
 const selectedModelKey = ref<string>(loadInitialModelKey())
+const resizeStart = ref<{ screenX: number; screenY: number; pointerId: number } | null>(null)
+const WIDGET_SIZE_STORAGE_KEY = 'desktopWidget.size'
 
 const sessionName = computed(() => monitor.activeSession.value?.display_name || 'Bridge monitor')
 const statusClass = computed(() => ({
@@ -112,12 +122,94 @@ watch(selectedModelKey, (key) => {
   }
 })
 
+onMounted(() => {
+  restoreWidgetSize()
+})
+
 function closeWindow(): void {
   window.desktopWidget?.close()
 }
 
 function reloadWindow(): void {
   window.desktopWidget?.reload()
+}
+
+function restoreWidgetSize(): void {
+  try {
+    const stored = localStorage.getItem(WIDGET_SIZE_STORAGE_KEY)
+    if (!stored) return
+    const parsed = JSON.parse(stored) as { w?: unknown; h?: unknown }
+    const w = Number(parsed.w)
+    const h = Number(parsed.h)
+    if (!Number.isFinite(w) || !Number.isFinite(h)) return
+    if (w < 1 || h < 1) return
+    window.desktopWidget?.applySize?.(w, h)
+  } catch {
+    // ignore unavailable or invalid storage
+  }
+}
+
+function persistWidgetSize(): void {
+  try {
+    localStorage.setItem(WIDGET_SIZE_STORAGE_KEY, JSON.stringify({
+      w: Math.round(window.innerWidth),
+      h: Math.round(window.innerHeight),
+    }))
+  } catch {
+    // ignore unavailable storage
+  }
+}
+
+function onResizeDown(e: PointerEvent): void {
+  e.preventDefault()
+  e.stopPropagation()
+  const screenX = Math.round(e.screenX)
+  const screenY = Math.round(e.screenY)
+  resizeStart.value = {
+    screenX,
+    screenY,
+    pointerId: e.pointerId,
+  }
+  ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
+  window.desktopWidget?.startResize?.(screenX, screenY)
+}
+
+function onResizeMove(e: PointerEvent): void {
+  if (!resizeStart.value || resizeStart.value.pointerId !== e.pointerId) return
+  if (e.buttons === 0) return
+  e.preventDefault()
+  e.stopPropagation()
+  window.desktopWidget?.resizeMove?.(Math.round(e.screenX), Math.round(e.screenY))
+}
+
+function finishResize(target: HTMLElement | null, pointerId: number | undefined): void {
+  if (target && pointerId != null) {
+    try {
+      target.releasePointerCapture?.(pointerId)
+    } catch {
+      // ignore stale pointer capture
+    }
+  }
+  resizeStart.value = null
+}
+
+function onResizeUp(e: PointerEvent): void {
+  if (!resizeStart.value || resizeStart.value.pointerId !== e.pointerId) return
+  e.preventDefault()
+  e.stopPropagation()
+  window.desktopWidget?.endResize?.()
+  finishResize(e.currentTarget as HTMLElement, e.pointerId)
+  window.requestAnimationFrame(() => {
+    persistWidgetSize()
+  })
+}
+
+function onResizeCancel(e: PointerEvent): void {
+  if (!resizeStart.value || resizeStart.value.pointerId !== e.pointerId) return
+  e.preventDefault()
+  e.stopPropagation()
+  window.desktopWidget?.endResize?.()
+  finishResize(e.currentTarget as HTMLElement, e.pointerId)
 }
 </script>
 
@@ -188,6 +280,28 @@ function reloadWindow(): void {
   background: rgb(255 255 255 / 36%);
   pointer-events: none;
   transform: translateX(-50%);
+}
+
+.resize-handle {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  z-index: 11;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  background:
+    linear-gradient(135deg,
+      transparent 0,
+      transparent 6px,
+      rgb(255 255 255 / 36%) 6px,
+      rgb(255 255 255 / 36%) 8px,
+      transparent 8px,
+      transparent 11px,
+      rgb(255 255 255 / 28%) 11px,
+      rgb(255 255 255 / 28%) 13px,
+      transparent 13px);
+  -webkit-app-region: no-drag;
 }
 
 .desktop-widget-model-picker {

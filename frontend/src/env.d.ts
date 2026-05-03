@@ -7,6 +7,10 @@ interface Window {
     startDrag?: (screenX: number, screenY: number) => void
     dragMove?: (screenX: number, screenY: number) => void
     endDrag?: () => void
+    startResize?: (screenX: number, screenY: number) => void
+    resizeMove?: (screenX: number, screenY: number) => void
+    endResize?: () => void
+    applySize?: (width: number, height: number) => void
   }
 }
 

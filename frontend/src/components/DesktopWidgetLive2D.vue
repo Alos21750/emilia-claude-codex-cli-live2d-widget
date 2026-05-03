@@ -54,6 +54,7 @@ let nextIdleMotionAt = 0
 let loadToken = 0
 let pointerStart: { screenX: number; screenY: number; ts: number; pointerId: number } | null = null
 let dragging = false
+let dprMediaQuery: MediaQueryList | null = null
 
 Live2DModelCubism4.registerTicker(PIXI.Ticker)
 Live2DModelCubism2.registerTicker(PIXI.Ticker)
@@ -109,8 +110,8 @@ function pickRandomMotion(currentModel: any): MotionEntry | null {
 
 function layoutModel(): void {
   if (!app || !model) return
-  const width = app.renderer.width
-  const height = app.renderer.height
+  const width = app.renderer.screen.width
+  const height = app.renderer.screen.height
   const bounds = model.getLocalBounds()
   const naturalWidth = Math.max(1, bounds.width)
   const naturalHeight = Math.max(1, bounds.height)
@@ -138,6 +139,20 @@ function resizeRenderer(): void {
   const rect = canvasRef.value.getBoundingClientRect()
   app.renderer.resize(Math.max(1, Math.floor(rect.width)), Math.max(1, Math.floor(rect.height)))
   layoutModel()
+}
+
+function watchDevicePixelRatio(): void {
+  dprMediaQuery?.removeEventListener?.('change', handleDevicePixelRatioChange)
+  dprMediaQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`)
+  dprMediaQuery.addEventListener?.('change', handleDevicePixelRatioChange)
+}
+
+function handleDevicePixelRatioChange(): void {
+  if (app) {
+    app.renderer.resolution = window.devicePixelRatio || 1
+    resizeRenderer()
+  }
+  watchDevicePixelRatio()
 }
 
 async function playStateMotion(state: SessionState): Promise<void> {
@@ -344,9 +359,10 @@ onMounted(() => {
     view: canvasRef.value,
     transparent: true,
     autoStart: true,
-    width: 360,
-    height: 440,
     backgroundAlpha: 0,
+    resolution: window.devicePixelRatio || 1,
+    autoDensity: true,
+    antialias: true,
   })
   app.stage.sortableChildren = true
   app.ticker.add(() => {
@@ -355,6 +371,7 @@ onMounted(() => {
     layoutModel()
   })
   window.addEventListener('resize', resizeRenderer)
+  watchDevicePixelRatio()
   resizeRenderer()
   idleMotionTimer = window.setInterval(() => {
     void maybePlayIdleMotion()
@@ -365,6 +382,8 @@ onMounted(() => {
 onUnmounted(() => {
   disposed = true
   window.removeEventListener('resize', resizeRenderer)
+  dprMediaQuery?.removeEventListener?.('change', handleDevicePixelRatioChange)
+  dprMediaQuery = null
   if (idleMotionTimer !== null) {
     window.clearInterval(idleMotionTimer)
     idleMotionTimer = null
