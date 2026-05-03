@@ -452,7 +452,6 @@ watch(
   display: block;
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 2px 8px rgb(0 0 0 / 35%));
   -webkit-app-region: no-drag;
   cursor: pointer;
 }
