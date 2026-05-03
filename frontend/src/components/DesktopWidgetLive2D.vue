@@ -22,11 +22,13 @@ const props = withDefaults(defineProps<{
   characterScale?: number
   resolutionMultiplier?: number
   maxFps?: number
+  hairPhysicsEnabled?: boolean
 }>(), {
   modelKey: 'ac_base_emilia01',
   characterScale: 1.0,
   resolutionMultiplier: 1.0,
   maxFps: 60,
+  hairPhysicsEnabled: true,
 })
 const modelPath = computed(() => `assets/models/rezero/${props.modelKey}/${props.modelKey}.model3.json`)
 
@@ -44,6 +46,7 @@ const STATE_MOTION_CANDIDATES: Record<SessionState, string[]> = {
   WAITING: ['mail', 'home', 'login', 'idle'],
 }
 const MIN_MODEL_SCALE = 0.06
+const HORIZONTAL_BIAS = 0.65
 const IDLE_MOTION_INTERVAL_MS = 10_000
 const IDLE_MOTION_JITTER_MS = 2_500
 const DRAG_THRESHOLD_PX = 5
@@ -60,6 +63,7 @@ let nextIdleMotionAt = 0
 let loadToken = 0
 let pointerStart: { screenX: number; screenY: number; ts: number; pointerId: number } | null = null
 let dragging = false
+let cachedPhysicsForCurrentModel: any = null
 
 Live2DModelCubism4.registerTicker(PIXI.Ticker)
 Live2DModelCubism2.registerTicker(PIXI.Ticker)
@@ -150,7 +154,7 @@ function layoutModel(): void {
   ) * normalizedCharacterScale())
   const scaledWidth = naturalWidth * scale
   const scaledHeight = naturalHeight * scale
-  const targetLeft = (width - scaledWidth) / 2
+  const targetLeft = (width - scaledWidth) * HORIZONTAL_BIAS
   const targetTop = topPadding + Math.max(0, availableHeight - scaledHeight) * 0.42
 
   model.scale.set(scale)
@@ -163,6 +167,16 @@ function resizeRenderer(): void {
   const rect = canvasRef.value.getBoundingClientRect()
   app.renderer.resize(Math.max(1, Math.floor(rect.width)), Math.max(1, Math.floor(rect.height)))
   layoutModel()
+}
+
+function applyHairPhysics(enabled: boolean): void {
+  if (!model?.internalModel) return
+  if (cachedPhysicsForCurrentModel === null && model.internalModel.physics) {
+    cachedPhysicsForCurrentModel = model.internalModel.physics
+  }
+  model.internalModel.physics = enabled && cachedPhysicsForCurrentModel
+    ? cachedPhysicsForCurrentModel
+    : null
 }
 
 async function playStateMotion(state: SessionState): Promise<void> {
@@ -354,8 +368,10 @@ async function loadModel(path: string): Promise<void> {
     model = null
   }
   model = loaded
+  cachedPhysicsForCurrentModel = null
   model.zIndex = 1
   app.stage.addChild(model)
+  applyHairPhysics(props.hairPhysicsEnabled)
   layoutWarmupTicks = 12
   layoutModel()
   lastMotionKey = ''
@@ -445,6 +461,13 @@ watch(
   () => {
     if (!app) return
     app.ticker.maxFPS = normalizedMaxFps()
+  },
+)
+
+watch(
+  () => props.hairPhysicsEnabled,
+  (enabled) => {
+    applyHairPhysics(enabled)
   },
 )
 </script>

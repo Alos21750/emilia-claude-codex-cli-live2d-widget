@@ -28,6 +28,10 @@
         <span>Always on top</span>
         <input v-model="alwaysOnTop" type="checkbox" />
       </label>
+      <label class="settings-row">
+        <span>Hair physics</span>
+        <input v-model="hairPhysicsEnabled" type="checkbox" />
+      </label>
     </div>
 
     <section class="desktop-widget-stage" :class="statusClass">
@@ -52,6 +56,7 @@
         :characterScale="characterScale"
         :resolutionMultiplier="resolutionMultiplier"
         :maxFps="maxFps"
+        :hairPhysicsEnabled="hairPhysicsEnabled"
       />
       <div class="bubbles-layer no-drag" aria-hidden="false">
         <div class="quota-bubble">
@@ -62,18 +67,6 @@
           <div class="bubble-line">
             <span class="bubble-label bubble-label--codex">Codex</span>
             <span class="bubble-value">{{ codexQuota }}</span>
-          </div>
-        </div>
-        <div class="session-bubble">
-          <div class="bubble-line">
-            <span class="bubble-label bubble-label--brand">{{ monitor.brandName.value }}</span>
-            <span class="bubble-value session-name">{{ sessionName }}</span>
-          </div>
-          <div class="bubble-line">
-            <span class="bubble-state">{{ monitor.activeStateText.value }}</span>
-          </div>
-          <div v-if="monitor.lastEventText.value" class="bubble-line bubble-event">
-            {{ monitor.lastEventText.value }}
           </div>
         </div>
       </div>
@@ -98,6 +91,7 @@ const CHARACTER_SCALE_STORAGE_KEY = 'desktopWidget.characterScale'
 const RESOLUTION_STORAGE_KEY = 'desktopWidget.resolution'
 const MAX_FPS_STORAGE_KEY = 'desktopWidget.maxFps'
 const ALWAYS_ON_TOP_STORAGE_KEY = 'desktopWidget.alwaysOnTop'
+const HAIR_PHYSICS_STORAGE_KEY = 'desktopWidget.hairPhysics'
 const settingsOpen = ref(false)
 const characterScale = ref(loadInitialNumberSetting(CHARACTER_SCALE_STORAGE_KEY, 1.0, 0.5, 2.0))
 const resolutionMultiplier = ref(loadInitialNumberSetting(
@@ -108,8 +102,8 @@ const resolutionMultiplier = ref(loadInitialNumberSetting(
 ))
 const maxFps = ref(loadInitialMaxFps())
 const alwaysOnTop = ref(loadInitialBooleanSetting(ALWAYS_ON_TOP_STORAGE_KEY, true))
+const hairPhysicsEnabled = ref(loadInitialBooleanSetting(HAIR_PHYSICS_STORAGE_KEY, true))
 
-const sessionName = computed(() => monitor.activeSession.value?.display_name || 'Bridge monitor')
 const statusClass = computed(() => ({
   'is-disconnected': monitor.connectionStatus.value === 'disconnected',
   'is-connected': monitor.connectionStatus.value === 'connected',
@@ -232,6 +226,10 @@ watch(maxFps, (value) => {
 watch(alwaysOnTop, (value) => {
   persistBooleanSetting(ALWAYS_ON_TOP_STORAGE_KEY, value)
   window.desktopWidget?.setAlwaysOnTop?.(value)
+})
+
+watch(hairPhysicsEnabled, (value) => {
+  persistBooleanSetting(HAIR_PHYSICS_STORAGE_KEY, value)
 })
 
 onMounted(() => {
@@ -536,16 +534,17 @@ function onResizeCancel(e: PointerEvent): void {
   pointer-events: none;
 }
 
-.quota-bubble,
-.session-bubble {
+.quota-bubble {
   position: absolute;
   top: 70px;
+  left: 14px;
   display: grid;
   gap: 4px;
-  max-width: 46%;
+  max-width: 42%;
   padding: 8px 12px;
   border: 1px solid rgb(255 255 255 / 18%);
   border-radius: 12px;
+  border-bottom-left-radius: 4px;
   color: #f8fbff;
   font-size: 11px;
   font-weight: 700;
@@ -557,19 +556,7 @@ function onResizeCancel(e: PointerEvent): void {
   text-shadow: 0 1px 2px rgb(0 0 0 / 60%);
 }
 
-.quota-bubble {
-  left: 14px;
-  border-bottom-left-radius: 4px;
-}
-
-.session-bubble {
-  right: 14px;
-  border-bottom-right-radius: 4px;
-  text-align: right;
-}
-
-.quota-bubble::after,
-.session-bubble::after {
+.quota-bubble::after {
   position: absolute;
   bottom: -8px;
   width: 0;
@@ -578,16 +565,8 @@ function onResizeCancel(e: PointerEvent): void {
   border: 8px solid transparent;
   border-top: 8px solid rgb(12 18 28 / 78%);
   border-bottom: 0;
-}
-
-.quota-bubble::after {
   right: 18px;
   border-right: 0;
-}
-
-.session-bubble::after {
-  left: 18px;
-  border-left: 0;
 }
 
 .bubble-line {
@@ -595,10 +574,6 @@ function onResizeCancel(e: PointerEvent): void {
   min-width: 0;
   align-items: center;
   gap: 6px;
-}
-
-.session-bubble .bubble-line {
-  justify-content: flex-end;
 }
 
 .bubble-label {
@@ -615,8 +590,7 @@ function onResizeCancel(e: PointerEvent): void {
   background: #ffd5b1;
 }
 
-.bubble-label--codex,
-.bubble-label--brand {
+.bubble-label--codex {
   background: #d8f3ff;
 }
 
@@ -626,22 +600,5 @@ function onResizeCancel(e: PointerEvent): void {
   color: #d7e2f0;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.session-name {
-  max-width: 130px;
-}
-
-.bubble-state {
-  flex: 1 1 auto;
-  color: #f8fbff;
-  font-weight: 800;
-}
-
-.bubble-event {
-  color: #aebdcc;
-  font-size: 10px;
-  font-style: italic;
-  font-weight: 600;
 }
 </style>
