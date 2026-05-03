@@ -1,0 +1,26 @@
+{
+  "name": "emilia-claude-codex-cli-live2d-widget-frontend",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5173",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 5173",
+    "electron:dev": "electron electron/main.js",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "pixi-live2d-display": "0.4.0",
+    "pixi.js": "6.5.10",
+    "vue": "3.5.13"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.17",
+    "@vitejs/plugin-vue": "4.6.2",
+    "electron": "30.5.1",
+    "typescript": "5.0.4",
+    "vite": "4.5.9",
+    "vue-tsc": "2.2.0"
+  }
+}
