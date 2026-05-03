@@ -1,0 +1,30 @@
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.npm-cache/
+frontend/node_modules.broken.*/
+
+# Live2D licensed assets (copied locally via setup script; not redistributed)
+frontend/public/assets/models/rezero/
+
+# Python / uv
+server/.venv/
+server/__pycache__/
+server/**/__pycache__/
+server/.uv-cache/
+*.pyc
+*.pyo
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Local secrets (just in case)
+.env
+.env.local
+*.pem
+*.key
