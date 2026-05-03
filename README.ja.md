@@ -59,6 +59,16 @@ cd ../frontend
 pwsh ./scripts/setup-emilia-models.ps1 -Source "<path to ReZero LiM Live2D Characters\Live2D Characters>"
 ```
 
+## portable .exe のビルド
+
+ビルドには `uv` / `uvx`、Node.js 20+、インストール済みの frontend npm dependencies が必要です。パッケージ版 v1 に含まれるのは Hiyori サンプルモデルのみで、ローカルの Emilia やボイス素材の取り込みはまだ対応していません。backend は固定で `127.0.0.1:8000` を使うため、この port が使用中の場合は起動に失敗します。
+
+```powershell
+pwsh scripts/build-exe.ps1
+```
+
+成果物は `frontend/release/EmiliaWidget-portable.exe` に出力され、サイズはおおよそ 80MB 以上です。
+
 ## 任意：ボイス clips
 
 ボイス clips はローカルで生成する任意素材です。セットアップスクリプトは `uvx` 経由で必要なときだけ `yt-dlp` を実行するため、`yt-dlp` のグローバルインストールは不要です。ボイスには著作権があります。個人・非商用の範囲でのみ使用してください。

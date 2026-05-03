@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -35,10 +36,13 @@ def _repo_root() -> Path:
 
 
 def _models_root() -> Path:
-    return _repo_root() / "frontend" / "public" / "assets" / "models"
+    return _public_root() / "assets" / "models"
 
 
 def _public_root() -> Path:
+    override = os.environ.get("WIDGET_PUBLIC_DIR")
+    if override:
+        return Path(override).expanduser().resolve()
     return _repo_root() / "frontend" / "public"
 
 

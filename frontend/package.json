@@ -3,9 +3,11 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5173",
     "build": "vite build",
+    "build:exe": "electron-builder --win portable",
     "preview": "vite preview --host 127.0.0.1 --port 5173",
     "electron:dev": "electron electron/main.js",
     "type-check": "vue-tsc --noEmit"
@@ -18,9 +20,53 @@
   "devDependencies": {
     "@types/node": "20.17.17",
     "@vitejs/plugin-vue": "4.6.2",
+    "electron-builder": "^24.13.3",
     "electron": "30.5.1",
     "typescript": "5.0.4",
     "vite": "4.5.9",
     "vue-tsc": "2.2.0"
+  },
+  "build": {
+    "appId": "com.alos21750.emilia-widget",
+    "productName": "Emilia Widget",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../server/dist/widget-backend.exe",
+        "to": "widget-backend.exe"
+      },
+      {
+        "from": "public/assets/models/free",
+        "to": "public/assets/models/free"
+      },
+      {
+        "from": "public/assets/live2dcubismcore.min.js",
+        "to": "public/assets/live2dcubismcore.min.js"
+      },
+      {
+        "from": "public/assets/live2d.min.js",
+        "to": "public/assets/live2d.min.js"
+      }
+    ],
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ]
+    },
+    "portable": {
+      "artifactName": "EmiliaWidget-portable.exe"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
+    }
   }
 }

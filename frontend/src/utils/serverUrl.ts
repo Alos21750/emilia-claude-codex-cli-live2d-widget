@@ -10,6 +10,9 @@ const DEFAULT_LOCAL_SERVER_URL = `http://${DEFAULT_LOCAL_BACKEND_HOST}:${DEFAULT
 export function getDefaultServerUrl(): string {
   if (typeof window === 'undefined') return DEFAULT_LOCAL_SERVER_URL
   const { hostname } = window.location
+  if (window.location.protocol === 'file:') {
+    return DEFAULT_LOCAL_SERVER_URL
+  }
   if (hostname === '127.0.0.1' || hostname === 'localhost') {
     return DEFAULT_LOCAL_SERVER_URL
   }

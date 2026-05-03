@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
+import { spawn } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { applyPlatformWidgetWindowBehavior, buildWidgetWindowOptions } from './platform.js'
@@ -7,8 +8,11 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const DEFAULT_WIDGET_URL = 'http://127.0.0.1:5173/'
+const BACKEND_START_DELAY_MS = 2000
 
+const isProd = app.isPackaged
 let widgetWindow = null
+let backendChild = null
 let dragState = null
 let resizeState = null
 
@@ -18,6 +22,57 @@ function clamp(n, lo, hi) {
 
 function resolveWidgetUrl() {
   return process.env.DESKTOP_WIDGET_URL || process.env.VITE_DEV_SERVER_URL || DEFAULT_WIDGET_URL
+}
+
+function spawnBackend() {
+  if (!isProd || backendChild) return
+  const exePath = path.join(process.resourcesPath, 'widget-backend.exe')
+  const publicDir = path.join(process.resourcesPath, 'public')
+  backendChild = spawn(exePath, ['--host', '127.0.0.1', '--port', '8000'], {
+    env: {
+      ...process.env,
+      WIDGET_PUBLIC_DIR: publicDir,
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
+  })
+  backendChild.stdout?.on('data', (data) => {
+    console.log('[backend]', String(data).trim())
+  })
+  backendChild.stderr?.on('data', (data) => {
+    console.error('[backend]', String(data).trim())
+  })
+  backendChild.on('error', (error) => {
+    console.error('[backend] failed to start', error)
+    backendChild = null
+  })
+  backendChild.on('exit', (code) => {
+    console.log('[backend] exited', code)
+    backendChild = null
+  })
+}
+
+function killBackend() {
+  if (!backendChild || backendChild.killed) return
+  try {
+    backendChild.kill()
+  } catch {
+    // ignore shutdown races
+  }
+  backendChild = null
+}
+
+function loadWidgetWindow() {
+  if (!widgetWindow) return
+  if (isProd) {
+    const filePath = path.join(__dirname, '..', 'dist', 'index.html')
+    console.log(`[widget] loadFile: ${filePath}`)
+    widgetWindow.loadFile(filePath)
+    return
+  }
+  const url = resolveWidgetUrl()
+  console.log(`[widget] loadURL: ${url}`)
+  widgetWindow.loadURL(url)
 }
 
 function createWidgetWindow() {
@@ -36,9 +91,12 @@ function createWidgetWindow() {
     console.log(`[renderer ${level}] ${message} (${source}:${line})`)
   })
 
-  const url = resolveWidgetUrl()
-  console.log(`[widget] loadURL: ${url}`)
-  widgetWindow.loadURL(url)
+  if (isProd) {
+    spawnBackend()
+    setTimeout(loadWidgetWindow, BACKEND_START_DELAY_MS)
+  } else {
+    loadWidgetWindow()
+  }
   widgetWindow.on('closed', () => {
     widgetWindow = null
     dragState = null
@@ -60,6 +118,10 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('before-quit', () => {
+  killBackend()
 })
 
 ipcMain.on('desktop-widget:close', () => {

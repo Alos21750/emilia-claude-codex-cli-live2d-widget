@@ -59,6 +59,16 @@ cd ../frontend
 pwsh ./scripts/setup-emilia-models.ps1 -Source "<path to ReZero LiM Live2D Characters\Live2D Characters>"
 ```
 
+## Building portable .exe
+
+The build requires `uv` / `uvx`, Node.js 20+, and installed frontend npm dependencies. Packaged v1 includes only the Hiyori sample model; local Emilia imports and voice assets are not supported in packaged mode yet. The backend uses fixed port `127.0.0.1:8000`, so startup fails if that port is already occupied.
+
+```powershell
+pwsh scripts/build-exe.ps1
+```
+
+The artifact is written to `frontend/release/EmiliaWidget-portable.exe` and starts around 80MB.
+
 ## Optional: voice clips
 
 Voice clips are optional local-only assets. The setup script runs `yt-dlp` through `uvx` on demand, so there is no global `yt-dlp` install. The voices are copyrighted; use them only for personal, non-commercial experiments.
