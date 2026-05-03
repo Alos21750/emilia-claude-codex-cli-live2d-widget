@@ -539,7 +539,7 @@ function onResizeCancel(e: PointerEvent): void {
 .quota-bubble,
 .session-bubble {
   position: absolute;
-  bottom: 16px;
+  top: 70px;
   display: grid;
   gap: 4px;
   max-width: 46%;
@@ -576,7 +576,7 @@ function onResizeCancel(e: PointerEvent): void {
   height: 0;
   content: "";
   border: 8px solid transparent;
-  border-top-color: rgb(12 18 28 / 78%);
+  border-top: 8px solid rgb(12 18 28 / 78%);
   border-bottom: 0;
 }
 

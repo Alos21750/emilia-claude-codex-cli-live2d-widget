@@ -48,6 +48,8 @@ pwsh ./scripts/setup-emilia-models.ps1 -Source "<path to ReZero LiM Live2D Chara
 
 ## Running
 
+On Windows, after completing setup, you can double-click `launch.bat` from the repo root. It validates the frontend dependencies, backend virtualenv, and local Emilia model assets, then starts the backend, Vite, and Electron widget.
+
 ```powershell
 # In one terminal: backend
 cd server
