@@ -1,8 +1,33 @@
 <template>
-  <main class="desktop-widget-shell">
+  <main class="desktop-widget-shell" :class="{ 'is-settings-open': settingsOpen }">
     <div class="desktop-widget-controls">
+      <button type="button" title="設定" :class="{ 'is-active': settingsOpen }" @click.stop="toggleSettings">⚙</button>
       <button type="button" title="重新載入" @click="reloadWindow">↻</button>
       <button type="button" title="關閉" @click="closeWindow">×</button>
+    </div>
+
+    <div v-if="settingsOpen" class="settings-panel no-drag" @click.stop>
+      <label class="settings-row">
+        <span>Zoom <em>{{ characterScale.toFixed(1) }}×</em></span>
+        <input v-model.number="characterScale" type="range" min="0.5" max="2.0" step="0.1" />
+      </label>
+      <label class="settings-row">
+        <span>Resolution <em>{{ resolutionMultiplier.toFixed(1) }}×</em></span>
+        <input v-model.number="resolutionMultiplier" type="range" min="1.0" max="4.0" step="0.5" />
+      </label>
+      <label class="settings-row">
+        <span>FPS <em>{{ maxFps }}</em></span>
+        <select v-model.number="maxFps">
+          <option :value="15">15</option>
+          <option :value="30">30</option>
+          <option :value="60">60</option>
+          <option :value="120">120</option>
+        </select>
+      </label>
+      <label class="settings-row">
+        <span>Always on top</span>
+        <input v-model="alwaysOnTop" type="checkbox" />
+      </label>
     </div>
 
     <section class="desktop-widget-stage" :class="statusClass">
@@ -21,7 +46,13 @@
         </option>
       </select>
 
-      <DesktopWidgetLive2D :state="monitor.activeState.value" :modelKey="selectedModelKey" />
+      <DesktopWidgetLive2D
+        :state="monitor.activeState.value"
+        :modelKey="selectedModelKey"
+        :characterScale="characterScale"
+        :resolutionMultiplier="resolutionMultiplier"
+        :maxFps="maxFps"
+      />
       <div class="status-bubble">
         <span class="status-dot"></span>
         <span>{{ monitor.activeStateText.value }}</span>
@@ -47,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import DesktopWidgetLive2D from '../components/DesktopWidgetLive2D.vue'
 import { getSessionActivityEpoch } from '../utils/sessionStageState'
 import { isDesktopWidgetWarmupSession, useDesktopWidgetMonitor } from '../composables/desktopWidgetMonitor'
@@ -58,6 +89,20 @@ const monitor = useDesktopWidgetMonitor()
 const selectedModelKey = ref<string>(loadInitialModelKey())
 const resizeStart = ref<{ screenX: number; screenY: number; pointerId: number } | null>(null)
 const WIDGET_SIZE_STORAGE_KEY = 'desktopWidget.size'
+const CHARACTER_SCALE_STORAGE_KEY = 'desktopWidget.characterScale'
+const RESOLUTION_STORAGE_KEY = 'desktopWidget.resolution'
+const MAX_FPS_STORAGE_KEY = 'desktopWidget.maxFps'
+const ALWAYS_ON_TOP_STORAGE_KEY = 'desktopWidget.alwaysOnTop'
+const settingsOpen = ref(false)
+const characterScale = ref(loadInitialNumberSetting(CHARACTER_SCALE_STORAGE_KEY, 1.0, 0.5, 2.0))
+const resolutionMultiplier = ref(loadInitialNumberSetting(
+  RESOLUTION_STORAGE_KEY,
+  window.devicePixelRatio || 1,
+  1.0,
+  4.0,
+))
+const maxFps = ref(loadInitialMaxFps())
+const alwaysOnTop = ref(loadInitialBooleanSetting(ALWAYS_ON_TOP_STORAGE_KEY, true))
 
 const sessionName = computed(() => monitor.activeSession.value?.display_name || 'Bridge monitor')
 const statusClass = computed(() => ({
@@ -114,6 +159,51 @@ function loadInitialModelKey(): string {
   }
 }
 
+function loadInitialNumberSetting(key: string, fallback: number, min: number, max: number): number {
+  const boundedFallback = Math.max(min, Math.min(max, fallback))
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return boundedFallback
+    const value = Number(raw)
+    if (!Number.isFinite(value) || value < min || value > max) return boundedFallback
+    return value
+  } catch {
+    return boundedFallback
+  }
+}
+
+function loadInitialMaxFps(): number {
+  const value = loadInitialNumberSetting(MAX_FPS_STORAGE_KEY, 60, 15, 120)
+  return value === 15 || value === 30 || value === 60 || value === 120 ? value : 60
+}
+
+function loadInitialBooleanSetting(key: string, fallback: boolean): boolean {
+  try {
+    const raw = localStorage.getItem(key)
+    if (raw === 'true') return true
+    if (raw === 'false') return false
+    return fallback
+  } catch {
+    return fallback
+  }
+}
+
+function persistNumberSetting(key: string, value: number): void {
+  try {
+    localStorage.setItem(key, String(value))
+  } catch {
+    // ignore unavailable storage
+  }
+}
+
+function persistBooleanSetting(key: string, value: boolean): void {
+  try {
+    localStorage.setItem(key, value ? 'true' : 'false')
+  } catch {
+    // ignore unavailable storage
+  }
+}
+
 watch(selectedModelKey, (key) => {
   try {
     localStorage.setItem('desktopWidget.modelKey', key)
@@ -122,8 +212,31 @@ watch(selectedModelKey, (key) => {
   }
 })
 
+watch(characterScale, (value) => {
+  persistNumberSetting(CHARACTER_SCALE_STORAGE_KEY, value)
+})
+
+watch(resolutionMultiplier, (value) => {
+  persistNumberSetting(RESOLUTION_STORAGE_KEY, value)
+})
+
+watch(maxFps, (value) => {
+  persistNumberSetting(MAX_FPS_STORAGE_KEY, value)
+})
+
+watch(alwaysOnTop, (value) => {
+  persistBooleanSetting(ALWAYS_ON_TOP_STORAGE_KEY, value)
+  window.desktopWidget?.setAlwaysOnTop?.(value)
+})
+
 onMounted(() => {
   restoreWidgetSize()
+  window.desktopWidget?.setAlwaysOnTop?.(alwaysOnTop.value)
+  document.addEventListener('click', closeSettingsFromOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', closeSettingsFromOutside)
 })
 
 function closeWindow(): void {
@@ -132,6 +245,14 @@ function closeWindow(): void {
 
 function reloadWindow(): void {
   window.desktopWidget?.reload()
+}
+
+function toggleSettings(): void {
+  settingsOpen.value = !settingsOpen.value
+}
+
+function closeSettingsFromOutside(): void {
+  settingsOpen.value = false
 }
 
 function restoreWidgetSize(): void {
@@ -240,7 +361,8 @@ function onResizeCancel(e: PointerEvent): void {
   -webkit-app-region: no-drag;
 }
 
-.desktop-widget-shell:hover .desktop-widget-controls {
+.desktop-widget-shell:hover .desktop-widget-controls,
+.desktop-widget-shell.is-settings-open .desktop-widget-controls {
   opacity: 1;
 }
 
@@ -257,6 +379,63 @@ function onResizeCancel(e: PointerEvent): void {
   background: rgb(12 18 28 / 72%);
   box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
   cursor: pointer;
+}
+
+.desktop-widget-controls button.is-active {
+  border-color: rgb(216 243 255 / 48%);
+  background: rgb(18 34 52 / 86%);
+}
+
+.settings-panel {
+  position: absolute;
+  top: 50px;
+  right: 12px;
+  z-index: 30;
+  display: grid;
+  gap: 8px;
+  width: 200px;
+  padding: 10px 12px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  color: #f8fbff;
+  font-size: 11px;
+  background: rgb(12 18 28 / 88%);
+  backdrop-filter: blur(10px);
+  user-select: text;
+}
+
+.settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-row span {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+}
+
+.settings-row em {
+  color: #d8f3ff;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.settings-row input[type="range"] {
+  width: 100%;
+}
+
+.settings-row input[type="checkbox"] {
+  align-self: flex-start;
+}
+
+.settings-row select {
+  padding: 3px 6px;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 6px;
+  color: #f8fbff;
+  background: rgb(12 18 28 / 60%);
 }
 
 .no-drag {

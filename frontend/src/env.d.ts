@@ -11,6 +11,7 @@ interface Window {
     resizeMove?: (screenX: number, screenY: number) => void
     endResize?: () => void
     applySize?: (width: number, height: number) => void
+    setAlwaysOnTop?: (value: boolean) => void
   }
 }
 

@@ -10,4 +10,5 @@ contextBridge.exposeInMainWorld('desktopWidget', {
   resizeMove: (screenX, screenY) => ipcRenderer.send('desktop-widget:resize-move', screenX, screenY),
   endResize: () => ipcRenderer.send('desktop-widget:resize-end'),
   applySize: (width, height) => ipcRenderer.send('desktop-widget:set-size', width, height),
+  setAlwaysOnTop: (value) => ipcRenderer.send('desktop-widget:set-always-on-top', !!value),
 })

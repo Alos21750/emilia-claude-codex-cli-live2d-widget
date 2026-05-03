@@ -19,8 +19,14 @@ import type { SessionState } from '../types/sessionState'
 const props = withDefaults(defineProps<{
   state: SessionState
   modelKey?: string
+  characterScale?: number
+  resolutionMultiplier?: number
+  maxFps?: number
 }>(), {
   modelKey: 'ac_base_emilia01',
+  characterScale: 1.0,
+  resolutionMultiplier: 1.0,
+  maxFps: 60,
 })
 const modelPath = computed(() => `assets/models/rezero/${props.modelKey}/${props.modelKey}.model3.json`)
 
@@ -54,7 +60,6 @@ let nextIdleMotionAt = 0
 let loadToken = 0
 let pointerStart: { screenX: number; screenY: number; ts: number; pointerId: number } | null = null
 let dragging = false
-let dprMediaQuery: MediaQueryList | null = null
 
 Live2DModelCubism4.registerTicker(PIXI.Ticker)
 Live2DModelCubism2.registerTicker(PIXI.Ticker)
@@ -108,6 +113,25 @@ function pickRandomMotion(currentModel: any): MotionEntry | null {
   return pool[index] || null
 }
 
+function clampNumber(value: number | undefined, fallback: number, min: number, max: number): number {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return fallback
+  return Math.max(min, Math.min(max, numeric))
+}
+
+function normalizedCharacterScale(): number {
+  return clampNumber(props.characterScale, 1.0, 0.5, 2.0)
+}
+
+function normalizedResolution(): number {
+  return clampNumber(props.resolutionMultiplier, 1.0, 1.0, 4.0)
+}
+
+function normalizedMaxFps(): number {
+  const fps = Number(props.maxFps)
+  return fps === 15 || fps === 30 || fps === 60 || fps === 120 ? fps : 60
+}
+
 function layoutModel(): void {
   if (!app || !model) return
   const width = app.renderer.screen.width
@@ -123,7 +147,7 @@ function layoutModel(): void {
   const scale = Math.max(MIN_MODEL_SCALE, Math.min(
     availableWidth / naturalWidth,
     availableHeight / naturalHeight,
-  ))
+  ) * normalizedCharacterScale())
   const scaledWidth = naturalWidth * scale
   const scaledHeight = naturalHeight * scale
   const targetLeft = (width - scaledWidth) / 2
@@ -139,20 +163,6 @@ function resizeRenderer(): void {
   const rect = canvasRef.value.getBoundingClientRect()
   app.renderer.resize(Math.max(1, Math.floor(rect.width)), Math.max(1, Math.floor(rect.height)))
   layoutModel()
-}
-
-function watchDevicePixelRatio(): void {
-  dprMediaQuery?.removeEventListener?.('change', handleDevicePixelRatioChange)
-  dprMediaQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`)
-  dprMediaQuery.addEventListener?.('change', handleDevicePixelRatioChange)
-}
-
-function handleDevicePixelRatioChange(): void {
-  if (app) {
-    app.renderer.resolution = window.devicePixelRatio || 1
-    resizeRenderer()
-  }
-  watchDevicePixelRatio()
 }
 
 async function playStateMotion(state: SessionState): Promise<void> {
@@ -359,19 +369,21 @@ onMounted(() => {
     view: canvasRef.value,
     transparent: true,
     autoStart: true,
+    width: 360,
+    height: 440,
     backgroundAlpha: 0,
-    resolution: window.devicePixelRatio || 1,
+    resolution: normalizedResolution(),
     autoDensity: true,
     antialias: true,
   })
   app.stage.sortableChildren = true
+  app.ticker.maxFPS = normalizedMaxFps()
   app.ticker.add(() => {
     if (layoutWarmupTicks <= 0) return
     layoutWarmupTicks -= 1
     layoutModel()
   })
   window.addEventListener('resize', resizeRenderer)
-  watchDevicePixelRatio()
   resizeRenderer()
   idleMotionTimer = window.setInterval(() => {
     void maybePlayIdleMotion()
@@ -382,8 +394,6 @@ onMounted(() => {
 onUnmounted(() => {
   disposed = true
   window.removeEventListener('resize', resizeRenderer)
-  dprMediaQuery?.removeEventListener?.('change', handleDevicePixelRatioChange)
-  dprMediaQuery = null
   if (idleMotionTimer !== null) {
     window.clearInterval(idleMotionTimer)
     idleMotionTimer = null
@@ -409,6 +419,30 @@ watch(
   () => props.modelKey,
   () => {
     void loadModel(modelPath.value)
+  },
+)
+
+watch(
+  () => props.characterScale,
+  () => {
+    layoutModel()
+  },
+)
+
+watch(
+  () => props.resolutionMultiplier,
+  () => {
+    if (!app) return
+    app.renderer.resolution = normalizedResolution()
+    resizeRenderer()
+  },
+)
+
+watch(
+  () => props.maxFps,
+  () => {
+    if (!app) return
+    app.ticker.maxFPS = normalizedMaxFps()
   },
 )
 </script>

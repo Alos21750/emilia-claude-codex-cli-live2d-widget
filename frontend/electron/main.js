@@ -127,3 +127,8 @@ ipcMain.on('desktop-widget:set-size', (_e, width, height) => {
   const h = clamp(Math.round(height), 300, 2000)
   widgetWindow.setSize(w, h)
 })
+
+ipcMain.on('desktop-widget:set-always-on-top', (_e, value) => {
+  if (!widgetWindow) return
+  widgetWindow.setAlwaysOnTop(!!value)
+})
