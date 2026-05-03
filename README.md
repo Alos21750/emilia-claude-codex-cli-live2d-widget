@@ -6,7 +6,7 @@ A small Windows desktop pet widget that watches your local **Claude Code** and *
 
 ## What it shows
 
-- **Live2D character** — Emilia (10 outfit variants), idle motions + click-to-play random motion, drag from any pixel of the character to move the window.
+- **Live2D character** — Emilia (10 outfit variants), idle motions + click-to-play random motion/voice line, drag from any pixel of the character to move the window.
 - **Codex quota** — primary / secondary rate limit % remaining.
 - **Claude quota** — five-hour and seven-day usage from Anthropic's OAuth `/usage` endpoint, polled every 30s.
 - **Per-session status** — which session is active, current state (IDLE / THINKING / TOOLING / RESPONDING), latest event.
@@ -46,6 +46,15 @@ cd ../frontend
 pwsh ./scripts/setup-emilia-models.ps1 -Source "<path to ReZero LiM Live2D Characters\Live2D Characters>"
 ```
 
+Optional voice clips are local-only assets generated from a user-supplied YouTube source. Install `yt-dlp` and `ffmpeg`, then run the setup script:
+
+```powershell
+winget install yt-dlp
+winget install ffmpeg
+cd frontend
+pwsh ./scripts/setup-emilia-voices.ps1
+```
+
 ## Running
 
 On Windows, after completing setup, you can double-click `launch.bat` from the repo root. It validates the frontend dependencies, backend virtualenv, and local Emilia model assets, then starts the backend, Vite, and Electron widget.
@@ -76,7 +85,7 @@ npm run electron:dev
 
 This project is **derived from** [Dylin-code/agents-stage-live2d-vrm3d](https://github.com/Dylin-code/agents-stage-live2d-vrm3d), the original visualization console for AI coding agents that pioneered the session-bridge architecture, the dual 2D/3D Live2D / VRM stage, and the OAuth-based Claude Code usage extraction this widget reuses verbatim. **All foundational ideas, the session-bridge runtime, and the Claude usage proxy are Dylin-code's work** — this fork narrows the scope to a single Windows monitor widget while preserving the parent's licensing.
 
-The Re:Zero LiM Live2D character models are © Kadokawa / Sekai Project / their respective rightsholders. They are referenced here only via a local setup script that copies your own legally obtained copy; **none of those assets are committed to this repository**, and use is intended for non-commercial personal experimentation only. Respect the original game's terms of use.
+The Re:Zero LiM Live2D character models and voice clips are © Kadokawa / Sekai Project / their respective rightsholders. They are referenced here only via local setup scripts that use your own source files or public links; **none of those assets are committed to this repository**, and use is intended for non-commercial personal experimentation only. Respect the original game's terms of use.
 
 `pixi-live2d-display`, PixiJS, Vue, Electron, FastAPI, and all third-party libraries retain their original licenses.
 

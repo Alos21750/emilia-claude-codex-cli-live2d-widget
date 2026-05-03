@@ -32,6 +32,18 @@
         <span>Hair physics</span>
         <input v-model="hairPhysicsEnabled" type="checkbox" />
       </label>
+      <label class="settings-row">
+        <span>Voice on tap</span>
+        <input v-model="voiceOnTap" type="checkbox" />
+      </label>
+      <label class="settings-row">
+        <span>Subtitle</span>
+        <input v-model="subtitleEnabled" type="checkbox" />
+      </label>
+      <label class="settings-row">
+        <span>Volume <em>{{ voiceVolume }}%</em></span>
+        <input v-model.number="voiceVolume" type="range" min="0" max="100" step="5" />
+      </label>
     </div>
 
     <section class="desktop-widget-stage" :class="statusClass">
@@ -57,7 +69,14 @@
         :resolutionMultiplier="resolutionMultiplier"
         :maxFps="maxFps"
         :hairPhysicsEnabled="hairPhysicsEnabled"
+        :voiceOnTap="voiceOnTap"
+        :voiceVolume="voiceVolume / 100"
+        @voice-played="onVoicePlayed"
+        @voice-ended="onVoiceEnded"
       />
+      <div v-if="voiceSubtitleVisible && activeVoice" class="voice-subtitle no-drag">
+        {{ activeVoice.text }}
+      </div>
       <div class="bubbles-layer no-drag" aria-hidden="false">
         <div class="quota-bubble">
           <div class="bubble-line">
@@ -82,6 +101,7 @@ import { getSessionActivityEpoch } from '../utils/sessionStageState'
 import { isDesktopWidgetWarmupSession, useDesktopWidgetMonitor } from '../composables/desktopWidgetMonitor'
 import type { DesktopWidgetSession } from '../composables/desktopWidgetMonitor'
 import { DEFAULT_EMILIA_KEY, EMILIA_MODELS, isValidEmiliaKey } from '../composables/emiliaModels'
+import type { EmiliaVoice } from '../composables/emiliaVoices'
 
 const monitor = useDesktopWidgetMonitor()
 const selectedModelKey = ref<string>(loadInitialModelKey())
@@ -92,6 +112,9 @@ const RESOLUTION_STORAGE_KEY = 'desktopWidget.resolution'
 const MAX_FPS_STORAGE_KEY = 'desktopWidget.maxFps'
 const ALWAYS_ON_TOP_STORAGE_KEY = 'desktopWidget.alwaysOnTop'
 const HAIR_PHYSICS_STORAGE_KEY = 'desktopWidget.hairPhysics'
+const VOICE_ON_TAP_STORAGE_KEY = 'desktopWidget.voiceOnTap'
+const SUBTITLE_STORAGE_KEY = 'desktopWidget.subtitle'
+const VOICE_VOLUME_STORAGE_KEY = 'desktopWidget.voiceVolume'
 const settingsOpen = ref(false)
 const characterScale = ref(loadInitialNumberSetting(CHARACTER_SCALE_STORAGE_KEY, 1.0, 0.5, 2.0))
 const resolutionMultiplier = ref(loadInitialNumberSetting(
@@ -103,6 +126,12 @@ const resolutionMultiplier = ref(loadInitialNumberSetting(
 const maxFps = ref(loadInitialMaxFps())
 const alwaysOnTop = ref(loadInitialBooleanSetting(ALWAYS_ON_TOP_STORAGE_KEY, true))
 const hairPhysicsEnabled = ref(loadInitialBooleanSetting(HAIR_PHYSICS_STORAGE_KEY, true))
+const voiceOnTap = ref(loadInitialBooleanSetting(VOICE_ON_TAP_STORAGE_KEY, true))
+const subtitleEnabled = ref(loadInitialBooleanSetting(SUBTITLE_STORAGE_KEY, true))
+const voiceVolume = ref(loadInitialNumberSetting(VOICE_VOLUME_STORAGE_KEY, 80, 0, 100))
+const activeVoice = ref<EmiliaVoice | null>(null)
+const voiceSubtitleVisible = ref(false)
+let voiceSubtitleTimer: number | null = null
 
 const statusClass = computed(() => ({
   'is-disconnected': monitor.connectionStatus.value === 'disconnected',
@@ -232,6 +261,21 @@ watch(hairPhysicsEnabled, (value) => {
   persistBooleanSetting(HAIR_PHYSICS_STORAGE_KEY, value)
 })
 
+watch(voiceOnTap, (value) => {
+  persistBooleanSetting(VOICE_ON_TAP_STORAGE_KEY, value)
+})
+
+watch(subtitleEnabled, (value) => {
+  persistBooleanSetting(SUBTITLE_STORAGE_KEY, value)
+  if (!value) {
+    hideVoiceSubtitle()
+  }
+})
+
+watch(voiceVolume, (value) => {
+  persistNumberSetting(VOICE_VOLUME_STORAGE_KEY, value)
+})
+
 onMounted(() => {
   restoreWidgetSize()
   window.desktopWidget?.setAlwaysOnTop?.(alwaysOnTop.value)
@@ -239,6 +283,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  clearVoiceSubtitleTimer()
   document.removeEventListener('click', closeSettingsFromOutside)
 })
 
@@ -256,6 +301,36 @@ function toggleSettings(): void {
 
 function closeSettingsFromOutside(): void {
   settingsOpen.value = false
+}
+
+function clearVoiceSubtitleTimer(): void {
+  if (voiceSubtitleTimer !== null) {
+    window.clearTimeout(voiceSubtitleTimer)
+    voiceSubtitleTimer = null
+  }
+}
+
+function hideVoiceSubtitle(): void {
+  clearVoiceSubtitleTimer()
+  voiceSubtitleVisible.value = false
+  activeVoice.value = null
+}
+
+function onVoicePlayed(voice: EmiliaVoice): void {
+  clearVoiceSubtitleTimer()
+  activeVoice.value = voice
+  voiceSubtitleVisible.value = subtitleEnabled.value
+  if (!subtitleEnabled.value) return
+  voiceSubtitleTimer = window.setTimeout(() => {
+    if (activeVoice.value?.n === voice.n) {
+      hideVoiceSubtitle()
+    }
+  }, voice.durationMs + 500)
+}
+
+function onVoiceEnded(voice: EmiliaVoice): void {
+  if (activeVoice.value?.n !== voice.n) return
+  hideVoiceSubtitle()
 }
 
 function restoreWidgetSize(): void {
@@ -525,6 +600,26 @@ function onResizeCancel(e: PointerEvent): void {
 .desktop-widget-live2d {
   width: 100%;
   height: 100%;
+}
+
+.voice-subtitle {
+  position: absolute;
+  top: 30%;
+  left: 34%;
+  z-index: 12;
+  max-width: 58%;
+  padding: 10px 14px;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 14px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.4;
+  background: rgb(12 18 28 / 84%);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 70%);
+  transform: translate(-10%, -50%);
 }
 
 .bubbles-layer {

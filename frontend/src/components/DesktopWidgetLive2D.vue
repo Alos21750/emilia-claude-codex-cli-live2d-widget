@@ -14,6 +14,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import * as PIXI from 'pixi.js'
 import { Live2DModel as Live2DModelCubism4 } from 'pixi-live2d-display/cubism4'
 import { Live2DModel as Live2DModelCubism2 } from 'pixi-live2d-display/cubism2'
+import { EMILIA_VOICES, type EmiliaVoice } from '../composables/emiliaVoices'
 import type { SessionState } from '../types/sessionState'
 
 const props = withDefaults(defineProps<{
@@ -23,13 +24,21 @@ const props = withDefaults(defineProps<{
   resolutionMultiplier?: number
   maxFps?: number
   hairPhysicsEnabled?: boolean
+  voiceOnTap?: boolean
+  voiceVolume?: number
 }>(), {
   modelKey: 'ac_base_emilia01',
   characterScale: 1.0,
   resolutionMultiplier: 1.0,
   maxFps: 60,
   hairPhysicsEnabled: true,
+  voiceOnTap: true,
+  voiceVolume: 0.8,
 })
+const emit = defineEmits<{
+  (event: 'voice-played', voice: EmiliaVoice): void
+  (event: 'voice-ended', voice: EmiliaVoice): void
+}>()
 const modelPath = computed(() => `assets/models/rezero/${props.modelKey}/${props.modelKey}.model3.json`)
 
 interface MotionEntry {
@@ -64,6 +73,8 @@ let loadToken = 0
 let pointerStart: { screenX: number; screenY: number; ts: number; pointerId: number } | null = null
 let dragging = false
 let cachedPhysicsForCurrentModel: any = null
+let voiceAudio: HTMLAudioElement | null = null
+let currentVoice: EmiliaVoice | null = null
 
 Live2DModelCubism4.registerTicker(PIXI.Ticker)
 Live2DModelCubism2.registerTicker(PIXI.Ticker)
@@ -136,6 +147,10 @@ function normalizedMaxFps(): number {
   return fps === 15 || fps === 30 || fps === 60 || fps === 120 ? fps : 60
 }
 
+function normalizedVoiceVolume(): number {
+  return clampNumber(props.voiceVolume, 0.8, 0, 1)
+}
+
 function layoutModel(): void {
   if (!app || !model) return
   const width = app.renderer.screen.width
@@ -179,6 +194,44 @@ function applyHairPhysics(enabled: boolean): void {
     : null
 }
 
+function handleVoiceEnded(): void {
+  if (!currentVoice) return
+  const endedVoice = currentVoice
+  currentVoice = null
+  emit('voice-ended', endedVoice)
+}
+
+function getVoiceAudio(): HTMLAudioElement {
+  if (!voiceAudio) {
+    voiceAudio = new Audio()
+    voiceAudio.preload = 'auto'
+    voiceAudio.addEventListener('ended', handleVoiceEnded)
+  }
+  return voiceAudio
+}
+
+function pickRandomVoice(): EmiliaVoice | null {
+  if (EMILIA_VOICES.length === 0) return null
+  return EMILIA_VOICES[Math.floor(Math.random() * EMILIA_VOICES.length)] || null
+}
+
+async function playRandomVoice(): Promise<void> {
+  const voice = pickRandomVoice()
+  if (!voice) return
+  emit('voice-played', voice)
+  currentVoice = voice
+  const audio = getVoiceAudio()
+  audio.pause()
+  audio.currentTime = 0
+  audio.volume = normalizedVoiceVolume()
+  audio.src = `/assets/voices/${voice.filename}`
+  try {
+    await audio.play()
+  } catch {
+    // Missing local voice clips still allow subtitles to show.
+  }
+}
+
 async function playStateMotion(state: SessionState): Promise<void> {
   if (!model) return
   const motion = pickMotion(model, state)
@@ -208,6 +261,9 @@ async function playStateMotion(state: SessionState): Promise<void> {
 
 async function handleCanvasClick(): Promise<void> {
   if (!model) return
+  if (props.voiceOnTap) {
+    void playRandomVoice()
+  }
   const motion = pickRandomMotion(model)
   if (!motion) return
   lastMotionKey = motion.key
@@ -424,6 +480,12 @@ onUnmounted(() => {
     app.destroy(true)
     app = null
   }
+  if (voiceAudio) {
+    voiceAudio.pause()
+    voiceAudio.removeEventListener('ended', handleVoiceEnded)
+    voiceAudio = null
+  }
+  currentVoice = null
 })
 
 watch(
@@ -468,6 +530,15 @@ watch(
   () => props.hairPhysicsEnabled,
   (enabled) => {
     applyHairPhysics(enabled)
+  },
+)
+
+watch(
+  () => props.voiceVolume,
+  () => {
+    if (voiceAudio) {
+      voiceAudio.volume = normalizedVoiceVolume()
+    }
   },
 )
 </script>

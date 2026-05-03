@@ -7,6 +7,7 @@ frontend/node_modules.broken.*/
 
 # Live2D licensed assets (copied locally via setup script; not redistributed)
 frontend/public/assets/models/rezero/
+/frontend/public/assets/voices/
 
 # Python / uv
 server/.venv/
