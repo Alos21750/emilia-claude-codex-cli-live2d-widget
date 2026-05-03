@@ -365,10 +365,12 @@ async function loadModel(path: string): Promise<void> {
 
 onMounted(() => {
   if (!canvasRef.value) return
+  PIXI.settings.ROUND_PIXELS = true
   app = new PIXI.Application({
     view: canvasRef.value,
     transparent: true,
     autoStart: true,
+    sharedTicker: true,
     width: 360,
     height: 440,
     backgroundAlpha: 0,
@@ -452,6 +454,9 @@ watch(
   display: block;
   width: 100%;
   height: 100%;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  will-change: transform;
   -webkit-app-region: no-drag;
   cursor: pointer;
 }

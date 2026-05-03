@@ -53,26 +53,31 @@
         :resolutionMultiplier="resolutionMultiplier"
         :maxFps="maxFps"
       />
-      <div class="status-bubble">
-        <span class="status-dot"></span>
-        <span>{{ monitor.activeStateText.value }}</span>
+      <div class="bubbles-layer no-drag" aria-hidden="false">
+        <div class="quota-bubble">
+          <div class="bubble-line">
+            <span class="bubble-label bubble-label--claude">Claude</span>
+            <span class="bubble-value">{{ claudeQuota }}</span>
+          </div>
+          <div class="bubble-line">
+            <span class="bubble-label bubble-label--codex">Codex</span>
+            <span class="bubble-value">{{ codexQuota }}</span>
+          </div>
+        </div>
+        <div class="session-bubble">
+          <div class="bubble-line">
+            <span class="bubble-label bubble-label--brand">{{ monitor.brandName.value }}</span>
+            <span class="bubble-value session-name">{{ sessionName }}</span>
+          </div>
+          <div class="bubble-line">
+            <span class="bubble-state">{{ monitor.activeStateText.value }}</span>
+          </div>
+          <div v-if="monitor.lastEventText.value" class="bubble-line bubble-event">
+            {{ monitor.lastEventText.value }}
+          </div>
+        </div>
       </div>
     </section>
-
-    <footer class="desktop-widget-status">
-      <div class="session-row">
-        <span class="brand">{{ monitor.brandName.value }}</span>
-        <span class="session-name">{{ sessionName }}</span>
-      </div>
-      <div class="quota-row">
-        <span class="brand-label brand-label--claude">Claude</span>
-        <span class="quota-value">{{ claudeQuota }}</span>
-      </div>
-      <div class="quota-row">
-        <span class="brand-label brand-label--codex">Codex</span>
-        <span class="quota-value">{{ codexQuota }}</span>
-      </div>
-    </footer>
 
   </main>
 </template>
@@ -338,7 +343,7 @@ function onResizeCancel(e: PointerEvent): void {
 .desktop-widget-shell {
   position: relative;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
   width: 100vw;
   height: 100vh;
   overflow: hidden;
@@ -524,109 +529,119 @@ function onResizeCancel(e: PointerEvent): void {
   height: 100%;
 }
 
-.status-bubble {
+.bubbles-layer {
   position: absolute;
-  top: 54px;
-  left: 22px;
-  display: inline-flex;
-  max-width: calc(100% - 44px);
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border: 1px solid rgb(255 255 255 / 14%);
-  border-radius: 8px;
-  color: #f8fbff;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.2;
-  background: rgb(20 28 40 / 74%);
-  box-shadow: none;
-  backdrop-filter: blur(10px);
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
 }
 
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: #74d680;
-  box-shadow: 0 0 14px rgb(116 214 128 / 70%);
-}
-
-.is-disconnected .status-dot {
-  background: #ff6b72;
-  box-shadow: 0 0 14px rgb(255 107 114 / 72%);
-}
-
-.desktop-widget-status {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+.quota-bubble,
+.session-bubble {
+  position: absolute;
+  bottom: 16px;
+  display: grid;
   gap: 4px;
-  padding: 6px 12px 12px;
-  border-top: none;
-  background: transparent;
-  backdrop-filter: none;
+  max-width: 46%;
+  padding: 8px 12px;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 12px;
+  color: #f8fbff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+  background: rgb(12 18 28 / 78%);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+  user-select: text;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 60%);
 }
 
-.session-row,
-.quota-row {
-  display: inline-flex;
+.quota-bubble {
+  left: 14px;
+  border-bottom-left-radius: 4px;
+}
+
+.session-bubble {
+  right: 14px;
+  border-bottom-right-radius: 4px;
+  text-align: right;
+}
+
+.quota-bubble::after,
+.session-bubble::after {
+  position: absolute;
+  bottom: -8px;
+  width: 0;
+  height: 0;
+  content: "";
+  border: 8px solid transparent;
+  border-top-color: rgb(12 18 28 / 78%);
+  border-bottom: 0;
+}
+
+.quota-bubble::after {
+  right: 18px;
+  border-right: 0;
+}
+
+.session-bubble::after {
+  left: 18px;
+  border-left: 0;
+}
+
+.bubble-line {
+  display: flex;
   min-width: 0;
-  max-width: 100%;
   align-items: center;
   gap: 6px;
-  overflow: hidden;
-  padding: 3px 8px;
-  border-radius: 8px;
-  background: rgb(12 18 28 / 56%);
-  text-shadow: 0 1px 2px rgb(0 0 0 / 60%);
-  backdrop-filter: blur(6px);
 }
 
-.brand {
+.session-bubble .bubble-line {
+  justify-content: flex-end;
+}
+
+.bubble-label {
   flex: 0 0 auto;
-  padding: 3px 7px;
-  border-radius: 6px;
+  padding: 2px 6px;
+  border-radius: 5px;
   color: #0f1722;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 800;
-  background: #d8f3ff;
+  letter-spacing: 0.04em;
 }
 
-.session-name {
-  min-width: 0;
-  overflow: hidden;
-  font-size: 13px;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.quota-row .brand-label {
-  flex: 0 0 auto;
-  padding: 2px 7px;
-  border-radius: 6px;
-  color: #0f1722;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-}
-
-.quota-row .brand-label--claude {
+.bubble-label--claude {
   background: #ffd5b1;
 }
 
-.quota-row .brand-label--codex {
+.bubble-label--codex,
+.bubble-label--brand {
   background: #d8f3ff;
 }
 
-.quota-row .quota-value {
+.bubble-value {
   min-width: 0;
   overflow: hidden;
   color: #d7e2f0;
-  font-size: 11px;
-  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.session-name {
+  max-width: 130px;
+}
+
+.bubble-state {
+  flex: 1 1 auto;
+  color: #f8fbff;
+  font-weight: 800;
+}
+
+.bubble-event {
+  color: #aebdcc;
+  font-size: 10px;
+  font-style: italic;
+  font-weight: 600;
 }
 </style>
