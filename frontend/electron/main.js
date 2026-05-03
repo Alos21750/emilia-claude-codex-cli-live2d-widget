@@ -20,7 +20,20 @@ function createWidgetWindow() {
   widgetWindow = new BrowserWindow(buildWidgetWindowOptions(preloadPath))
 
   applyPlatformWidgetWindowBehavior(widgetWindow)
-  widgetWindow.loadURL(resolveWidgetUrl())
+
+  if (process.env.WIDGET_DEVTOOLS === '1' || process.env.WIDGET_DEBUG === '1') {
+    widgetWindow.webContents.openDevTools({ mode: 'detach' })
+  }
+  widgetWindow.webContents.on('did-fail-load', (_e, code, desc, url) => {
+    console.error(`[widget] did-fail-load code=${code} desc=${desc} url=${url}`)
+  })
+  widgetWindow.webContents.on('console-message', (_e, level, message, line, source) => {
+    console.log(`[renderer ${level}] ${message} (${source}:${line})`)
+  })
+
+  const url = resolveWidgetUrl()
+  console.log(`[widget] loadURL: ${url}`)
+  widgetWindow.loadURL(url)
   widgetWindow.on('closed', () => {
     widgetWindow = null
     dragState = null
