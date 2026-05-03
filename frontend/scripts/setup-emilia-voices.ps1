@@ -81,7 +81,7 @@ try {
     $startArg = $start.ToString("0.###", $culture)
     $durationArg = $duration.ToString("0.###", $culture)
 
-    & ffmpeg -hide_banner -loglevel error -y -ss $startArg -t $durationArg -i $rawWav -vn -codec:a aac -b:a 96k $outputPath
+    & ffmpeg -hide_banner -loglevel error -y -ss $startArg -t $durationArg -i $rawWav -vn -af loudnorm=I=-14:TP=-1.5:LRA=11 -codec:a aac -b:a 128k $outputPath
     if ($LASTEXITCODE -ne 0) {
       throw "ffmpeg failed while writing $filename"
     }
