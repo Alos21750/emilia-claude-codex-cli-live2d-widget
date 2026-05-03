@@ -35,13 +35,14 @@ if (-not (Test-Path $manifestPath)) {
   throw "Voice manifest not found: $manifestPath"
 }
 
-$voices = @(Get-Content -Raw -Encoding UTF8 $manifestPath | ConvertFrom-Json)
+$voicesRaw = Get-Content -Raw -Encoding UTF8 $manifestPath | ConvertFrom-Json
+$voices = if ($voicesRaw -is [array]) { $voicesRaw } else { @($voicesRaw) }
 New-Item -ItemType Directory -Force -Path $voicesDir | Out-Null
 New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
 
 $expectedFiles = @()
 foreach ($voice in $voices) {
-  $filename = "{0:D3}_{1}.mp3" -f [int]$voice.n, [string]$voice.slug
+  $filename = "{0:D3}_{1}.m4a" -f [int]$voice.n, [string]$voice.slug
   $expectedFiles += (Join-Path $voicesDir $filename)
 }
 
@@ -75,12 +76,12 @@ try {
       $end = $finalEndSeconds
     }
     $duration = [Math]::Max(0.5, $end - $start)
-    $filename = "{0:D3}_{1}.mp3" -f [int]$voice.n, [string]$voice.slug
+    $filename = "{0:D3}_{1}.m4a" -f [int]$voice.n, [string]$voice.slug
     $outputPath = Join-Path $voicesDir $filename
     $startArg = $start.ToString("0.###", $culture)
     $durationArg = $duration.ToString("0.###", $culture)
 
-    & ffmpeg -hide_banner -loglevel error -y -ss $startArg -t $durationArg -i $rawWav -vn -codec:a libmp3lame -q:a 4 $outputPath
+    & ffmpeg -hide_banner -loglevel error -y -ss $startArg -t $durationArg -i $rawWav -vn -codec:a aac -b:a 96k $outputPath
     if ($LASTEXITCODE -ne 0) {
       throw "ffmpeg failed while writing $filename"
     }

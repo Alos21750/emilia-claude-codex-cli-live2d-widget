@@ -25,7 +25,7 @@ export const EMILIA_VOICES: readonly EmiliaVoice[] = rawVoices.map((voice, index
   const durationSeconds = Math.max(0.5, end - voice.start)
   return {
     ...voice,
-    filename: `${String(voice.n).padStart(3, '0')}_${voice.slug}.mp3`,
+    filename: `${String(voice.n).padStart(3, '0')}_${voice.slug}.m4a`,
     durationMs: Math.round(durationSeconds * 1000),
   }
 })
