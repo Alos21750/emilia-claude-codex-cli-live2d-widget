@@ -38,7 +38,7 @@ The older view is kept as a visual reference for comparing the bubble layout, ch
 
 ## Setup
 
-Prerequisites: Node.js 20+, [uv](https://astral.sh/uv), PowerShell 5+, and your own extracted Re:Zero LiM Live2D character files.
+Prerequisites: Node.js 20+, [uv](https://astral.sh/uv), and PowerShell 5+. The default Hiyori sample model ships with the repo; for Emilia, prepare your own extracted Re:Zero LiM Live2D character files.
 
 ```powershell
 # 1) Clone
@@ -54,7 +54,7 @@ cd ../server
 uv venv
 uv sync
 
-# 4) Live2D character assets — needs YOUR copy of the ReZero LiM Live2D files
+# 4) Optional Emilia assets — needs YOUR copy of the ReZero LiM Live2D files
 cd ../frontend
 pwsh ./scripts/setup-emilia-models.ps1 -Source "<path to ReZero LiM Live2D Characters\Live2D Characters>"
 ```
@@ -121,6 +121,8 @@ The gear panel includes:
 This project is **derived from** [Dylin-code/agents-stage-live2d-vrm3d](https://github.com/Dylin-code/agents-stage-live2d-vrm3d). The session-bridge architecture, Claude OAuth usage proxy, and core session monitoring ideas are the original author's work; this fork narrows the scope into a single Windows desktop widget.
 
 Live2D character assets are © 雷瑟莉雅, Re:Zero -Starting Life in Another World- Lost in Memories, and their respective rightsholders, for personal non-commercial use only. This repo does not commit character models or voice assets; users must provide or generate them locally.
+
+The default Hiyori sample model is authored by Live2D Inc. and used under the [Free Material License Agreement](https://www.live2d.com/eula/live2d-free-material-license-agreement_en.html) and [Terms of Use for Live2D Cubism Sample Data](https://www.live2d.com/eula/live2d-sample-model-terms_en.html).
 
 `pixi-live2d-display`, PixiJS, Vue, Electron, FastAPI, and other third-party packages retain their original MIT, MPL, or other licenses. Optional voice clips are user-provided from a public source and generated locally for personal use only.
 

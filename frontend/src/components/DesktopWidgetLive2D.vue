@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import * as PIXI from 'pixi.js'
 import { Live2DModel as Live2DModelCubism4 } from 'pixi-live2d-display/cubism4'
 import { Live2DModel as Live2DModelCubism2 } from 'pixi-live2d-display/cubism2'
@@ -19,7 +19,7 @@ import type { SessionState } from '../types/sessionState'
 
 const props = withDefaults(defineProps<{
   state: SessionState
-  modelKey?: string
+  modelPath?: string
   characterScale?: number
   resolutionMultiplier?: number
   maxFps?: number
@@ -27,7 +27,7 @@ const props = withDefaults(defineProps<{
   voiceOnTap?: boolean
   voiceVolume?: number
 }>(), {
-  modelKey: 'ac_base_emilia01',
+  modelPath: '',
   characterScale: 1.0,
   resolutionMultiplier: 1.0,
   maxFps: 60,
@@ -39,7 +39,6 @@ const emit = defineEmits<{
   (event: 'voice-played', voice: EmiliaVoice): void
   (event: 'voice-ended', voice: EmiliaVoice): void
 }>()
-const modelPath = computed(() => `assets/models/rezero/${props.modelKey}/${props.modelKey}.model3.json`)
 
 interface MotionEntry {
   group: string
@@ -399,7 +398,7 @@ async function maybePlayIdleMotion(): Promise<void> {
 }
 
 async function loadModel(path: string): Promise<void> {
-  if (!app) return
+  if (!app || !path) return
   const token = ++loadToken
   const ModelClass = path.endsWith('.model3.json') ? Live2DModelCubism4 : Live2DModelCubism2
   let loaded: any
@@ -472,7 +471,7 @@ onMounted(() => {
   idleMotionTimer = window.setInterval(() => {
     void maybePlayIdleMotion()
   }, 1000)
-  void loadModel(modelPath.value)
+  void loadModel(props.modelPath)
 })
 
 onUnmounted(() => {
@@ -506,9 +505,9 @@ watch(
 )
 
 watch(
-  () => props.modelKey,
+  () => props.modelPath,
   () => {
-    void loadModel(modelPath.value)
+    void loadModel(props.modelPath)
   },
 )
 

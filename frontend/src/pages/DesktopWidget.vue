@@ -56,15 +56,21 @@
         @pointerup.stop.prevent="onResizeUp"
         @pointercancel.stop.prevent="onResizeCancel"
       ></div>
-      <select v-model="selectedModelKey" class="desktop-widget-model-picker no-drag" aria-label="Live2D character">
-        <option v-for="item in EMILIA_MODELS" :key="item.key" :value="item.key">
+      <select
+        v-model="selectedModelKey"
+        class="desktop-widget-model-picker no-drag"
+        aria-label="Live2D character"
+        :disabled="modelsLoading || availableModels.length === 0"
+      >
+        <option v-for="item in availableModels" :key="item.key" :value="item.key">
           {{ item.displayName }}
         </option>
       </select>
 
       <DesktopWidgetLive2D
+        v-if="selectedModelPath"
         :state="monitor.activeState.value"
-        :modelKey="selectedModelKey"
+        :modelPath="selectedModelPath"
         :characterScale="characterScale"
         :resolutionMultiplier="resolutionMultiplier"
         :maxFps="maxFps"
@@ -100,10 +106,12 @@ import DesktopWidgetLive2D from '../components/DesktopWidgetLive2D.vue'
 import { getSessionActivityEpoch } from '../utils/sessionStageState'
 import { isDesktopWidgetWarmupSession, useDesktopWidgetMonitor } from '../composables/desktopWidgetMonitor'
 import type { DesktopWidgetSession } from '../composables/desktopWidgetMonitor'
-import { DEFAULT_EMILIA_KEY, EMILIA_MODELS, isValidEmiliaKey } from '../composables/emiliaModels'
+import { DEFAULT_FALLBACK_KEY, isValidModelKey, useAvailableModels } from '../composables/availableModels'
+import type { Live2DModel } from '../composables/availableModels'
 import type { EmiliaVoice } from '../composables/emiliaVoices'
 
 const monitor = useDesktopWidgetMonitor()
+const { availableModels, modelsLoading } = useAvailableModels()
 const selectedModelKey = ref<string>(loadInitialModelKey())
 const resizeStart = ref<{ screenX: number; screenY: number; pointerId: number } | null>(null)
 const WIDGET_SIZE_STORAGE_KEY = 'desktopWidget.size'
@@ -137,6 +145,9 @@ const statusClass = computed(() => ({
   'is-disconnected': monitor.connectionStatus.value === 'disconnected',
   'is-connected': monitor.connectionStatus.value === 'connected',
 }))
+const selectedModelPath = computed(() => {
+  return availableModels.value.find((item) => item.key === selectedModelKey.value)?.modelPath || ''
+})
 const claudeQuota = computed(() => {
   const usage = monitor.claudeUsage.value
   if (usage) {
@@ -179,12 +190,19 @@ function formatBrandQuota(session: DesktopWidgetSession | null): string {
 }
 
 function loadInitialModelKey(): string {
+  return readStoredModelKey() || DEFAULT_FALLBACK_KEY
+}
+
+function readStoredModelKey(): string {
   try {
-    const stored = localStorage.getItem('desktopWidget.modelKey') || ''
-    return isValidEmiliaKey(stored) ? stored : DEFAULT_EMILIA_KEY
+    return localStorage.getItem('desktopWidget.modelKey') || ''
   } catch {
-    return DEFAULT_EMILIA_KEY
+    return ''
   }
+}
+
+function pickDefaultModelKey(models: Live2DModel[]): string {
+  return models.find((item) => item.key === DEFAULT_FALLBACK_KEY)?.key || models[0]?.key || ''
 }
 
 function loadInitialNumberSetting(key: string, fallback: number, min: number, max: number): number {
@@ -232,7 +250,17 @@ function persistBooleanSetting(key: string, value: boolean): void {
   }
 }
 
+watch(availableModels, (models) => {
+  if (models.length === 0) return
+  if (isValidModelKey(selectedModelKey.value, models)) return
+  const stored = readStoredModelKey()
+  selectedModelKey.value = isValidModelKey(stored, models)
+    ? stored
+    : pickDefaultModelKey(models)
+}, { immediate: true })
+
 watch(selectedModelKey, (key) => {
+  if (!key) return
   try {
     localStorage.setItem('desktopWidget.modelKey', key)
   } catch {

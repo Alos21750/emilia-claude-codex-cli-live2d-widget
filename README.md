@@ -38,7 +38,7 @@ Live2D 桌寵在你電腦角落看顧 Claude Code 與 Codex 的工作狀態。
 
 ## 安裝
 
-先準備：Node.js 20+、[uv](https://astral.sh/uv)、PowerShell 5+，以及你自己解出的 Re:Zero LiM Live2D 角色檔案。
+先準備：Node.js 20+、[uv](https://astral.sh/uv)、PowerShell 5+。預設 Hiyori 範例模型會隨 repo 提供；若要使用 Emilia，另外準備你自己解出的 Re:Zero LiM Live2D 角色檔案。
 
 ```powershell
 # 1) Clone
@@ -54,7 +54,7 @@ cd ../server
 uv venv
 uv sync
 
-# 4) Live2D character assets — needs YOUR copy of the ReZero LiM Live2D files
+# 4) Optional Emilia assets — needs YOUR copy of the ReZero LiM Live2D files
 cd ../frontend
 pwsh ./scripts/setup-emilia-models.ps1 -Source "<path to ReZero LiM Live2D Characters\Live2D Characters>"
 ```
@@ -121,6 +121,8 @@ npm run electron:dev
 本專案**衍生自** [Dylin-code/agents-stage-live2d-vrm3d](https://github.com/Dylin-code/agents-stage-live2d-vrm3d)。全部 session-bridge 架構、Claude OAuth usage proxy 與核心 session 監看想法，都是原作者的工作；此 fork 將範圍收斂成單一 Windows 桌面 widget。
 
 Live2D 角色資源 © 雷瑟莉雅、Re:Zero -Starting Life in Another World- Lost in Memories 各權利方，僅供個人非商業使用。本 repo 不提交角色模型或語音素材，所有資源都必須由使用者自行提供或本機產生。
+
+預設 Hiyori 範例模型由 Live2D Inc. 製作，依照 [Free Material License Agreement](https://www.live2d.com/eula/live2d-free-material-license-agreement_en.html) 與 [Terms of Use for Live2D Cubism Sample Data](https://www.live2d.com/eula/live2d-sample-model-terms_en.html) 使用。
 
 `pixi-live2d-display`、PixiJS、Vue、Electron、FastAPI 與其他第三方套件保留各自的 MIT、MPL 或原授權條款。選用語音 clips 由使用者提供公開來源並在本機產生，僅供個人使用。
 
