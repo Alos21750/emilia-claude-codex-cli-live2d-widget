@@ -46,10 +46,12 @@ cd ../frontend
 pwsh ./scripts/setup-emilia-models.ps1 -Source "<path to ReZero LiM Live2D Characters\Live2D Characters>"
 ```
 
-Optional voice clips are local-only assets generated from a user-supplied YouTube source. Install `yt-dlp` and `ffmpeg`, then run the setup script:
+Optional voice clips are local-only assets generated from a user-supplied YouTube source. The setup script runs `yt-dlp` through `uvx`, so no global `yt-dlp` install is needed. Install `uv` / `uvx` and `ffmpeg`, then run the setup script:
 
 ```powershell
-winget install yt-dlp
+winget install astral-sh.uv
+# or:
+irm https://astral.sh/uv/install.ps1 | iex
 winget install ffmpeg
 cd frontend
 pwsh ./scripts/setup-emilia-voices.ps1

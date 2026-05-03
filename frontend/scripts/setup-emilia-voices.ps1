@@ -9,9 +9,10 @@ function Test-Tool {
   return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
-if (-not (Test-Tool "yt-dlp")) {
-  Write-Host "Missing yt-dlp. Install it first:"
-  Write-Host "  winget install yt-dlp"
+if (-not (Test-Tool "uvx")) {
+  Write-Host "Missing uvx. Install uv first:"
+  Write-Host "  winget install astral-sh.uv"
+  Write-Host "  irm https://astral.sh/uv/install.ps1 | iex"
   exit 1
 }
 
@@ -56,7 +57,7 @@ try {
   }
 
   Write-Host "Downloading source audio..."
-  & yt-dlp --no-playlist -x --audio-format wav -o $rawTemplate $VideoUrl
+  & uvx --from yt-dlp yt-dlp --no-playlist -x --audio-format wav -o $rawTemplate $VideoUrl
   if ($LASTEXITCODE -ne 0) {
     throw "yt-dlp failed with exit code $LASTEXITCODE"
   }
