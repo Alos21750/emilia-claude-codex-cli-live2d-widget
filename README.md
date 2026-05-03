@@ -1,96 +1,129 @@
-# emilia-claude-codex-cli-live2d-widget
+**繁體中文** · [English](README.en.md) · [日本語](README.ja.md)
 
-A small Windows desktop pet widget that watches your local **Claude Code** and **Codex CLI** sessions, shows real-time quota usage, and renders **Emilia** (Re:Zero -Starting Life in Another World- Lost in Memories) as a Live2D companion you can drag, click, and pin on top of any workspace.
+# ✨ Emilia Claude / Codex Live2D 桌寵
 
-> **Status: bootstrapping.** The skeleton is in place; frontend extraction and slim backend are landing in subsequent commits. See the `feat/widget-transparent-windows` branch on the parent fork (`Alos21750/agents-stage-live2d-vrm3d`) for the in-progress code that will be migrated here.
+Live2D 桌寵在你電腦角落看顧 Claude Code 與 Codex 的工作狀態。
 
-## What it shows
+<p align="center">
+  <img src="docs/images/widget-bubbles.png" alt="Emilia Live2D 桌寵主畫面截圖" width="280">
+</p>
 
-- **Live2D character** — Emilia (10 outfit variants), idle motions + click-to-play random motion/voice line, drag from any pixel of the character to move the window.
-- **Codex quota** — primary / secondary rate limit % remaining.
-- **Claude quota** — five-hour and seven-day usage from Anthropic's OAuth `/usage` endpoint, polled every 30s.
-- **Per-session status** — which session is active, current state (IDLE / THINKING / TOOLING / RESPONDING), latest event.
-- **Transparent, frameless, always-on-top** Electron window.
+<p align="center">
+  <strong>Windows · Electron 30 · Vue 3 · FastAPI</strong>
+</p>
 
-Out of scope for v1:
-- Two-way chat with the agent
-- Persona / model / approval workflow
+## 功能特色
 
-## Architecture
+- 🎀 角色 picker：內建 10 種 Emilia 造型變體。
+- 😊 點一下角色可播放表情動作與隨機台詞。
+- 🖱️ 按住角色即可拖曳到桌面任何角落。
+- 📊 Codex / Claude 配額即時刷新：Claude 5h/7d，Codex P/S。
+- ⚙️ 可調 zoom、resolution、FPS、置頂、髮絲物理、字幕與音量。
+- 🪟 透明、無框、Always-on-top，適合放在螢幕邊角。
+- 🔌 本機監看 Claude Code 與 Codex CLI session，不需要雲端後台。
 
-Two-tier:
-- `frontend/` — Vite + Vue 3 + PixiJS + pixi-live2d-display + Electron (main + preload).
-- `server/` — slim FastAPI + watchfiles process that tails `~/.codex/sessions` and `~/.claude/projects` JSONL files and proxies Anthropic's OAuth usage endpoint.
+## 截圖
 
-This is intentionally narrower than the parent project: no chat, no TTS, no LangChain, no RAG, no torch.
+<p align="center">
+  <img src="docs/images/widget-bubbles.png" alt="主畫面：Emilia、配額泡泡與底部狀態 chip" width="360">
+</p>
 
-## Setup
+主畫面顯示 Emilia Live2D、Claude / Codex 配額泡泡，以及底部狀態 chip。這張是目前 README 使用的參考圖，可自行替換成最新截圖。
+
+<p align="center">
+  <img src="docs/images/widget-old.png" alt="舊版 widget 畫面參考" width="360">
+</p>
+
+舊版畫面保留作為視覺演進參考，方便比較泡泡、角色位置與透明視窗效果。
+
+## 安裝
+
+先準備：Node.js 20+、[uv](https://astral.sh/uv)、PowerShell 5+，以及你自己解出的 Re:Zero LiM Live2D 角色檔案。
 
 ```powershell
-# Clone
+# 1) Clone
 git clone https://github.com/Alos21750/emilia-claude-codex-cli-live2d-widget.git
 cd emilia-claude-codex-cli-live2d-widget
 
-# Frontend
+# 2) Frontend
 cd frontend
 npm install
 
-# Backend
+# 3) Backend (uv-managed)
 cd ../server
 uv venv
 uv sync
 
-# Live2D character assets — Re:Zero LiM Live2D files must already exist on
-# disk somewhere (e.g. extracted from your own copy). Run:
+# 4) Live2D character assets — needs YOUR copy of the ReZero LiM Live2D files
 cd ../frontend
 pwsh ./scripts/setup-emilia-models.ps1 -Source "<path to ReZero LiM Live2D Characters\Live2D Characters>"
 ```
 
-Optional voice clips are local-only assets generated from a user-supplied YouTube source. The setup script runs `yt-dlp` through `uvx`, so no global `yt-dlp` install is needed. Install `uv` / `uvx` and `ffmpeg`, then run the setup script:
+## 選用：語音 clips
+
+語音 clips 是本機產生的選用素材，腳本會透過 `uvx` 按需執行 `yt-dlp`，不需要全域安裝 `yt-dlp`。語音內容有著作權，請只用於個人、非商業用途。
 
 ```powershell
-winget install astral-sh.uv
-# or:
-irm https://astral.sh/uv/install.ps1 | iex
 winget install ffmpeg
+# uv supplies yt-dlp on demand (winget install astral-sh.uv if you don't have it yet)
 cd frontend
 pwsh ./scripts/setup-emilia-voices.ps1
 ```
 
-## Running
+產生後會得到 51 段常見情緒與互動用的語音 clips；README 不收錄任何台詞全文。
 
-On Windows, after completing setup, you can double-click `launch.bat` from the repo root. It validates the frontend dependencies, backend virtualenv, and local Emilia model assets, then starts the backend, Vite, and Electron widget.
+## 執行
 
 ```powershell
-# In one terminal: backend
-cd server
-.\.venv\Scripts\python.exe main.py
-
-# In another: frontend dev server
-cd frontend
-npm run dev
-
-# In a third: Electron widget
-cd frontend
-$env:DESKTOP_WIDGET_URL="http://127.0.0.1:5173/"
-npm run electron:dev
+# Easy (Windows): double-click launch.bat
+# Or manually in 3 terminals:
+cd server && .venv\Scripts\python.exe main.py
+cd frontend && npm run dev
+cd frontend && npm run electron:dev
 ```
 
-Adjust window size via env vars (defaults 280×400):
+需要調整視窗預設大小時，可在啟動 Electron 前設定：
+
 ```powershell
 $env:WIDGET_WIDTH=320
 $env:WIDGET_HEIGHT=460
 npm run electron:dev
 ```
 
-## Credits and acknowledgements
+## 自訂設定
 
-This project is **derived from** [Dylin-code/agents-stage-live2d-vrm3d](https://github.com/Dylin-code/agents-stage-live2d-vrm3d), the original visualization console for AI coding agents that pioneered the session-bridge architecture, the dual 2D/3D Live2D / VRM stage, and the OAuth-based Claude Code usage extraction this widget reuses verbatim. **All foundational ideas, the session-bridge runtime, and the Claude usage proxy are Dylin-code's work** — this fork narrows the scope to a single Windows monitor widget while preserving the parent's licensing.
+齒輪面板提供這些選項：
 
-The Re:Zero LiM Live2D character models and voice clips are © Kadokawa / Sekai Project / their respective rightsholders. They are referenced here only via local setup scripts that use your own source files or public links; **none of those assets are committed to this repository**, and use is intended for non-commercial personal experimentation only. Respect the original game's terms of use.
+- **Zoom** 0.5×–2.0× — 調整角色尺寸。
+- **Resolution** 1×–4× — Pixi super-sampling，讓邊緣更銳利。
+- **FPS** 15/30/60/120。
+- **Always on top** — 切換視窗置頂。
+- **Hair physics** — 切換髮絲物理；部分 Emilia 造型若抖動可關閉。
+- **Voice on tap** — 點擊角色時是否播放語音。
+- **Subtitle** — 點擊時是否顯示字幕。
+- **Volume** 0–100。
 
-`pixi-live2d-display`, PixiJS, Vue, Electron, FastAPI, and all third-party libraries retain their original licenses.
+## 疑難排解
+
+- 角色跑到角落看不到：重新載入，或關掉 widget 後重開。這通常是 HMR 邊界情況。
+- 髮絲還是抖：把 Resolution 拉到 3× 或 4×；其他造型可試著關閉 Hair physics。
+- 沒聲音：先執行 `setup-emilia-voices.ps1`；`ffmpeg` 是必要工具。
+
+## 架構
+
+- Frontend：Vue 3 + PixiJS + `pixi-live2d-display`，包在 Electron 透明無框視窗中。
+- Backend：精簡 FastAPI，tail `~/.codex/sessions` 與 `~/.claude/projects` JSONL 檔案，並代理 Anthropic OAuth `/usage` 查詢。
+- WebSocket `session_state` stream 提供即時狀態更新。
+- 100% 本機運作；除了 Claude OAuth 配額查詢外，不依賴外部服務。
+
+## Credits & licensing
+
+本專案**衍生自** [Dylin-code/agents-stage-live2d-vrm3d](https://github.com/Dylin-code/agents-stage-live2d-vrm3d)。全部 session-bridge 架構、Claude OAuth usage proxy 與核心 session 監看想法，都是原作者的工作；此 fork 將範圍收斂成單一 Windows 桌面 widget。
+
+Live2D 角色資源 © 雷瑟莉雅、Re:Zero -Starting Life in Another World- Lost in Memories 各權利方，僅供個人非商業使用。本 repo 不提交角色模型或語音素材，所有資源都必須由使用者自行提供或本機產生。
+
+`pixi-live2d-display`、PixiJS、Vue、Electron、FastAPI 與其他第三方套件保留各自的 MIT、MPL 或原授權條款。選用語音 clips 由使用者提供公開來源並在本機產生，僅供個人使用。
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT，見 [LICENSE](./LICENSE)。
